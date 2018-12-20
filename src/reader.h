@@ -47,19 +47,40 @@ class Reader {
     return filename_.substr(suff_pos);
   }
 
+  // modified to ignore comments starting with #
   EdgeList ReadInEL(std::ifstream &in) {
     EdgeList el;
     NodeID_ u, v;
+    while (true) {
+      char c = in.peek();
+      if (c == '#') {
+        in.ignore(200, '\n');
+      } else {
+        break;
+      }
+    }
+
     while (in >> u >> v) {
       el.push_back(Edge(u, v));
     }
     return el;
   }
 
+  // modified to ignore comments starting with #
   EdgeList ReadInWEL(std::ifstream &in) {
     EdgeList el;
     NodeID_ u;
     NodeWeight<NodeID_, WeightT_> v;
+
+    while (true) {
+      char c = in.peek();
+      if (c == '#') {
+        in.ignore(200, '\n');
+      } else {
+        break;
+      }
+    }
+
     while (in >> u >> v) {
       el.push_back(Edge(u, v));
     }
@@ -226,7 +247,7 @@ class Reader {
       std::cout << "Couldn't open file " << filename_ << std::endl;
       std::exit(-2);
     }
-    if (suffix == ".el") {
+    if (suffix == ".el" || suffix == ".txt") {
       el = ReadInEL(file);
     } else if (suffix == ".wel") {
       needs_weights = false;
