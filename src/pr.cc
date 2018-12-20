@@ -99,6 +99,10 @@ int main(int argc, char* argv[]) {
     return -1;
   Builder b(cli);
   Graph g = b.MakeGraph();
+  std::cout << "top k: " << cli.relabel_top_k() << std::endl;
+  if (cli.relabel_top_k())
+    g = Builder::RelabelByDegreeTopK(g, cli.relabel_top_k());
+
   auto PRBound = [&cli] (const Graph &g) {
     return PageRankPull(g, cli.max_iters(), cli.tolerance());
   };

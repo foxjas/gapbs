@@ -280,6 +280,60 @@ class BuilderBase {
     PrintTime("Relabel", t.Seconds());
     return CSRGraph<NodeID_, DestID_, invert>(g.num_nodes(), index, neighs);
   }
+
+  /**
+   * Assumes undirected (uses out degree)
+   */
+  static
+  CSRGraph<NodeID_, DestID_, invert> RelabelByDegreeTopK(
+      const CSRGraph<NodeID_, DestID_, invert> &g, int k) {
+    if (g.directed()) {
+      std::cout << "Cannot relabel directed graph" << std::endl;
+      std::exit(-11);
+    }
+    Timer t;
+    t.Start();
+    typedef std::pair<int64_t, NodeID_> degree_node_p;
+    pvector<degree_node_p> degree_id_pairs(g.num_nodes());
+    #pragma omp parallel for
+    for (NodeID_ n=0; n < g.num_nodes(); n++)
+      degree_id_pairs[n] = std::make_pair(g.out_degree(n), n);
+    std::sort(degree_id_pairs.begin(), degree_id_pairs.end(),
+              std::greater<degree_node_p>());
+    pvector<NodeID_> degrees(g.num_nodes());
+    pvector<NodeID_> new_ids(g.num_nodes());
+
+    if ((k < 0) || (k > g.num_nodes())) // set k to |V|
+        k = g.num_nodes();
+
+    #pragma omp parallel for
+    for (NodeID_ n=0; n < k; n++) {
+      new_ids[degree_id_pairs[n].second] = n;
+      degrees[n] = degree_id_pairs[n].first;
+    }
+
+    // generate new mapping for the rest of the values
+    std::shuffle(degree_id_pairs.begin()+k,degree_id_pairs.end(), std::mt19937()); // shuffle using Mersenne twister
+    #pragma omp parallel for
+    for (NodeID_ n=k; n < g.num_nodes(); n++) {
+      new_ids[degree_id_pairs[n].second] = n;
+      degrees[n] = degree_id_pairs[n].first;
+    }
+
+    // relabel and create CSR
+    pvector<SGOffset> offsets = ParallelPrefixSum(degrees);
+    DestID_* neighs = new DestID_[offsets[g.num_nodes()]];
+    DestID_** index = CSRGraph<NodeID_, DestID_>::GenIndex(offsets, neighs);
+    #pragma omp parallel for
+    for (NodeID_ u=0; u < g.num_nodes(); u++) {
+      for (NodeID_ v : g.out_neigh(u))
+        neighs[offsets[new_ids[u]]++] = new_ids[v];
+      std::sort(index[new_ids[u]], index[new_ids[u]+1]);
+    }
+    t.Stop();
+    PrintTime("Relabel top-k", t.Seconds());
+    return CSRGraph<NodeID_, DestID_, invert>(g.num_nodes(), index, neighs);
+  }
 };
 
 #endif  // BUILDER_H_
