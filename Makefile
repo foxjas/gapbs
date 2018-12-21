@@ -1,10 +1,11 @@
 # See LICENSE.txt for license details.
 
+CXX = icpc
 CXX_FLAGS += -std=c++11 -O3 -Wall
 PAR_FLAG = -fopenmp
 
 ifneq (,$(findstring icpc,$(CXX)))
-	PAR_FLAG = -openmp
+	PAR_FLAG = -qopenmp
 endif
 
 ifneq (,$(findstring sunCC,$(CXX)))
