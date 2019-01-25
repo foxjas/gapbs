@@ -16,8 +16,9 @@ ifneq ($(SERIAL), 1)
 	CXX_FLAGS += $(PAR_FLAG)
 endif
 
-KERNELS = bc bfs cc cc_sv pr sssp tc
-SUITE = $(KERNELS) converter
+#KERNELS = bc bfs cc cc_sv pr sssp tc
+KERNELS = Gorder# GorderGraph UnitHeap GorderUtil
+SUITE = $(KERNELS)
 
 .PHONY: all
 all: $(SUITE)
