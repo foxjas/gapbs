@@ -1,6 +1,6 @@
 # See LICENSE.txt for license details.
 
-CXX_FLAGS += -std=c++11 -O3 -Wall
+CXX_FLAGS += -std=c++11 -O3 -Wall -DGCC -DRelease
 PAR_FLAG = -fopenmp
 
 ifneq (,$(findstring icpc,$(CXX)))
@@ -17,7 +17,7 @@ ifneq ($(SERIAL), 1)
 endif
 
 #KERNELS = bc bfs cc cc_sv pr sssp tc
-KERNELS = Gorder# GorderGraph UnitHeap GorderUtil
+KERNELS = Gorder
 SUITE = $(KERNELS)
 
 .PHONY: all

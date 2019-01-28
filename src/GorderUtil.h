@@ -1,5 +1,5 @@
-#ifndef UTIL_H_
-#define UTIL_H_
+#ifndef GORDER_UTIL_H_
+#define GORDER_UTIL_H_
 
 #include <iostream>
 #include <algorithm>

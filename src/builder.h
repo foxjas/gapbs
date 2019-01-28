@@ -334,6 +334,46 @@ class BuilderBase {
     PrintTime("Relabel top-k", t.Seconds());
     return CSRGraph<NodeID_, DestID_, invert>(g.num_nodes(), index, neighs);
   }
+
+  /**
+   * Relabel according to provide mapping
+   * Input mapping: (i, m[i]) -> (new id, old id)
+   * Uses out-degree; assumes undirected graph
+   */
+  static
+  CSRGraph<NodeID_, DestID_, invert> Relabel(
+      const CSRGraph<NodeID_, DestID_, invert> &g, vector<int> &new_ids) {
+    if (g.directed()) {
+      std::cout << "Cannot relabel directed graph" << std::endl;
+      std::exit(-11);
+    }
+
+    Timer t;
+    t.Start();
+    pvector<NodeID_> degrees(g.num_nodes());
+
+    // generate new id mapping, and set degrees for (relabeled) vertices
+    #pragma omp parallel for
+    for (NodeID_ n=0; n < g.num_nodes(); n++) {
+      degrees[new_ids[n]] = g.out_degree(n);
+    }
+
+    // relabel and create CSR
+    pvector<SGOffset> offsets = ParallelPrefixSum(degrees);
+    DestID_* neighs = new DestID_[offsets[g.num_nodes()]];
+    DestID_** index = CSRGraph<NodeID_, DestID_>::GenIndex(offsets, neighs);
+
+    #pragma omp parallel for
+    for (NodeID_ u=0; u < g.num_nodes(); u++) {
+      for (NodeID_ v : g.out_neigh(u))
+        neighs[offsets[new_ids[u]]++] = new_ids[v];
+      std::sort(index[new_ids[u]], index[new_ids[u]+1]);
+    }
+    t.Stop();
+    PrintTime("Relabel", t.Seconds());
+    return CSRGraph<NodeID_, DestID_, invert>(g.num_nodes(), index, neighs);
+  }
+
 };
 
 #endif  // BUILDER_H_

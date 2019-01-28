@@ -370,8 +370,6 @@ vector<int> RemoveGreaterThanTopK(int k){
     	i += 1;
     	curr_deg = deg_id_pairs[i].first;
     }
-    // should be zero if k <= 0
-    cout << "removed vertices: " << removedVertices.size() << std::endl;
 
 	vector<int>().swap(inedge); // deallocate inedge
 	vector< pair<int, int> > edges;
@@ -877,14 +875,16 @@ void GorderGreedy(vector<int>& retorder, int window){
 }
 
 
+
 /**
  * Version that takes in a list of vertices to omit from Gorder.
  * The list of vertex IDs are instead simply appended to the end.
- */ 
+ */
 void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 	UnitHeap unitheap(vsize);
 	vector<bool> popvexist(vsize, false);
 	vector<int> order;
+	set<int> skipSet(skipVertices.begin(), skipVertices.end());
 	int count=0;
 	order.reserve(vsize);
 	const int hugevertex=sqrt((double)vsize);
@@ -899,13 +899,12 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 
 	tmpweight=-1;
 	for(int i=0; i<vsize; i++){
-		// tracks highest degree vertex
-		if(graph[i].indegree>tmpweight){
-			tmpweight=graph[i].indegree;
-			tmpindex=i;
-		}else if(graph[i].indegree+graph[i].outdegree==0){
+		if (skipSet.find(i) != skipSet.end()) {
 			unitheap.update[i]=INT_MAX/2;
 			unitheap.DeleteElement(i);
+ 		} else if(graph[i].indegree>tmpweight){ // tracks highest degree vertex
+			tmpweight=graph[i].indegree;
+			tmpindex=i;
 		}
 	}
 
@@ -1089,20 +1088,22 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 	}
 	order.insert(order.end()-1, skipVertices.begin(), skipVertices.end());
 
-
 #ifndef Release
+	cout << "Size of mapping after Gorder: " << order.size() << endl;
 	vector<int> tmporder=order;
 	sort(tmporder.begin(), tmporder.end());
 	for(int i=0; i<tmporder.size()-1; i++){
 		if(tmporder[i]==tmporder[i+1]){
 			cout << "same elements: " << tmporder[i] << endl;
-			system("pause");
+			exit(1);
+			// system("pause");
 		}
 	}
 	for(int i=0; i<tmporder.size(); i++){
 		if(tmporder[i]!=i){
 			cout << tmporder[i] << '\t' << i << endl;
-			system("pause");
+			exit(1);
+			// system("pause");
 		}
 	}
 	tmporder=vector<int>();
@@ -1114,7 +1115,6 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 		retorder[order[i]]=i;
 	}
 }
-
 
 
 void RCMOrder(vector<int>& retorder){
