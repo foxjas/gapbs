@@ -110,7 +110,6 @@ int main(int argc, char* argv[]){
     return PRVerifier(g_pr, scores, cli.tolerance());
   };
 
-    // ios::sync_with_stdio(false);
     int W=5;
     int k = cli.relabel_top_k();
     bool undirected=cli.symmetrize();
@@ -126,12 +125,8 @@ int main(int argc, char* argv[]){
     //start=clock();
     vector<int> removed;
     g_tmp.readGorderGraph(filename, undirected);
-    if (k) {
-        removed = g_tmp.RemoveGreaterThanTopK(k);
-        cout << "Vertices removed: " << removed.size() << endl; // should be zero if k <= 0
-    } else {
-        g_tmp.Transform();
-    }
+    removed = g_tmp.RemoveGreaterThanTopK(k);
+    cout << "Vertices removed: " << removed.size() << endl; // should be zero if k <= 0
 
     cout << name << " readGorderGraph is complete." << endl;
     //end=clock();
@@ -139,11 +134,7 @@ int main(int argc, char* argv[]){
 
     start=clock();
     vector<int> order;
-    if (k) {
-        g_tmp.GorderGreedy(order, removed, W);
-    } else {
-        g_tmp.GorderGreedy(order, W);
-    }
+    g_tmp.GorderGreedy(order, removed, W);
     end=clock();
     cout << "ReOrdered Time Cost: " << (double)(end-start)/CLOCKS_PER_SEC << endl;
   
