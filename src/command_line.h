@@ -112,7 +112,7 @@ class CLApp : public CLBase {
   int num_trials_ = 16;
   int64_t start_vertex_ = -1;
   bool do_verify_ = false;
-  int relabel_top_k_ = 0;
+  float relabel_top_p_ = 0;
 
  public:
   CLApp(int argc, char** argv, std::string name) : CLBase(argc, argv, name) {
@@ -121,7 +121,7 @@ class CLApp : public CLBase {
     AddHelpLine('n', "n", "perform n trials", std::to_string(num_trials_));
     AddHelpLine('r', "node", "start from node r", "rand");
     AddHelpLine('v', "", "verify the output of each run", "false");
-    AddHelpLine('p', "", "relabel top k vertices by degree, descending", "-1");
+    AddHelpLine('p', "", "relabel top fraction p of vertices by degree, descending", "0.0");
   }
 
   void HandleArg(signed char opt, char* opt_arg) override {
@@ -130,7 +130,7 @@ class CLApp : public CLBase {
       case 'n': num_trials_ = atoi(opt_arg);            break;
       case 'r': start_vertex_ = atol(opt_arg);          break;
       case 'v': do_verify_ = true;                      break;
-      case 'p': relabel_top_k_ = atoi(opt_arg);             break;
+      case 'p': relabel_top_p_ = atof(opt_arg);         break;
       default: CLBase::HandleArg(opt, opt_arg);
     }
   }
@@ -139,7 +139,7 @@ class CLApp : public CLBase {
   int num_trials() const { return num_trials_; }
   int64_t start_vertex() const { return start_vertex_; }
   bool do_verify() const { return do_verify_; }
-  int relabel_top_k() const { return relabel_top_k_; }
+  double relabel_top_p() const { return relabel_top_p_; }
 };
 
 

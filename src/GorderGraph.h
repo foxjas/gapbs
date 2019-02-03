@@ -351,11 +351,15 @@ vector<int> RemoveGreaterThanTopK(int k){
     for (int i=0; i<graph.size(); i++) {
         deg_id_pairs[i] = make_pair(graph[i].indegree, i);
     }
+
+    // TODO: how does greater comparison handle 2nd item, upon tiebreak?
     sort(deg_id_pairs.begin(), deg_id_pairs.end(), greater<deg_node_p>()); 
     int deg_cutoff = INT_MAX/2; // default for k = 0
+    int v_cutoff = INT_MAX/2;
     if (k > 0) {
 	    deg_node_p kth_pair = deg_id_pairs[k-1];
 	    deg_cutoff = kth_pair.first;
+	    v_cutoff = kth_pair.second;
     	cout << "degree cutoff for k=" << k << ": " << deg_cutoff << std::endl;
    	}
 
@@ -365,10 +369,20 @@ vector<int> RemoveGreaterThanTopK(int k){
     removedVertices.reserve(k);
     int i = 0;
     int curr_deg = deg_id_pairs[i].first;
-    while (curr_deg >= deg_cutoff) {
+    int curr_v = deg_id_pairs[i].second;
+    while (curr_deg > deg_cutoff) {
     	removedVertices.push_back(deg_id_pairs[i].second);
     	i += 1;
     	curr_deg = deg_id_pairs[i].first;
+    	curr_v =  deg_id_pairs[i].second;
+    }
+    while (curr_deg == deg_cutoff) {
+    	if (curr_v >= v_cutoff) {
+	    	removedVertices.push_back(deg_id_pairs[i].second);
+    	}
+    	i += 1;
+    	curr_deg = deg_id_pairs[i].first;
+       	curr_v =  deg_id_pairs[i].second;
     }
 
 	vector<int>().swap(inedge); // deallocate inedge
@@ -377,7 +391,7 @@ vector<int> RemoveGreaterThanTopK(int k){
     long long new_edgenum = 0;
 	for(int i=0; i<vsize; i++){
 		for(int j=graph[i].outstart, limit=graph[i+1].outstart; j<limit; j++) {
-            if (graph[outedge[j]].indegree < deg_cutoff) {
+            if ((graph[outedge[j]].indegree < deg_cutoff) || ((graph[outedge[j]].indegree == deg_cutoff) && (i < v_cutoff)))  {
 			    edges.push_back(make_pair(i, outedge[j]));
                 new_edgenum += 1;
             }
@@ -896,7 +910,7 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 	unitheap.ReConstruct();
 
 	int tmpindex, tmpweight;
-
+	tmpindex=-1;
 	tmpweight=-1;
 	for(int i=0; i<vsize; i++){
 		if (skipSet.find(i) != skipSet.end()) {
@@ -908,51 +922,53 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 		}
 	}
 
-	order.push_back(tmpindex);
-	unitheap.update[tmpindex]=INT_MAX/2;
-	unitheap.DeleteElement(tmpindex);
-	for(int i=graph[tmpindex].instart, limit1=graph[tmpindex+1].instart; i<limit1; i++){
-		int u=inedge[i];
-		if(graph[u].outdegree<=hugevertex){
-			if(unitheap.update[u]==0){
-				unitheap.IncrementKey(u);
-			} else {
-#ifndef Release
-				if(unitheap.update[u]==INT_MAX)
-					unitheap.update[u]=INT_MAX/2;
-#endif
-				unitheap.update[u]++;
+	if (tmpindex >= 0) {
+		order.push_back(tmpindex);
+		unitheap.update[tmpindex]=INT_MAX/2;
+		unitheap.DeleteElement(tmpindex);
+		for(int i=graph[tmpindex].instart, limit1=graph[tmpindex+1].instart; i<limit1; i++){
+			int u=inedge[i];
+			if(graph[u].outdegree<=hugevertex){
+				if(unitheap.update[u]==0){
+					unitheap.IncrementKey(u);
+				} else {
+	#ifndef Release
+					if(unitheap.update[u]==INT_MAX)
+						unitheap.update[u]=INT_MAX/2;
+	#endif
+					unitheap.update[u]++;
+				}
+				
+				if(graph[u].outdegree>1)
+				for(int j=graph[u].outstart, limit2=graph[u+1].outstart; j<limit2; j++){
+					int w=outedge[j];
+					if(unitheap.update[w]==0){
+						unitheap.IncrementKey(w);
+					} else {
+	#ifndef Release
+						if(unitheap.update[w]==INT_MAX)
+							unitheap.update[w]=INT_MAX/2;
+	#endif
+						unitheap.update[w]++;
+					}
+					
+				}
 			}
-			
-			if(graph[u].outdegree>1)
-			for(int j=graph[u].outstart, limit2=graph[u+1].outstart; j<limit2; j++){
-				int w=outedge[j];
+		}
+		if(graph[tmpindex].outdegree<=hugevertex){
+			for(int i=graph[tmpindex].outstart, limit1=graph[tmpindex+1].outstart; i<limit1; i++){
+				int w=outedge[i];
 				if(unitheap.update[w]==0){
 					unitheap.IncrementKey(w);
-				} else {
-#ifndef Release
+				}else{
+	#ifndef Release
 					if(unitheap.update[w]==INT_MAX)
 						unitheap.update[w]=INT_MAX/2;
-#endif
+	#endif
 					unitheap.update[w]++;
 				}
 				
 			}
-		}
-	}
-	if(graph[tmpindex].outdegree<=hugevertex){
-		for(int i=graph[tmpindex].outstart, limit1=graph[tmpindex+1].outstart; i<limit1; i++){
-			int w=outedge[i];
-			if(unitheap.update[w]==0){
-				unitheap.IncrementKey(w);
-			}else{
-#ifndef Release
-				if(unitheap.update[w]==INT_MAX)
-					unitheap.update[w]=INT_MAX/2;
-#endif
-				unitheap.update[w]++;
-			}
-			
 		}
 	}
 
@@ -961,7 +977,8 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 	clock_t sum1=0, sum2=0, sum3=0;
 #endif
 
-	while(count<vsize-1-skipVertices.size()){
+	int vOrderLimit = vsize-skipVertices.size()-1;
+	while(count<vOrderLimit){
 #ifndef Release
 		if(count%1000000==0){
 			cout << count << endl;
@@ -974,7 +991,6 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 				
 		time1=clock();
 #endif
-
 		int v=unitheap.ExtractMax();
 		count++;
 #ifndef Release
@@ -1086,7 +1102,7 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 	sum3+=time4-time3;
 #endif
 	}
-	order.insert(order.end()-1, skipVertices.begin(), skipVertices.end());
+	order.insert(order.end(), skipVertices.begin(), skipVertices.end());
 
 #ifndef Release
 	cout << "Size of mapping after Gorder: " << order.size() << endl;

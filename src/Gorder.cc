@@ -111,7 +111,11 @@ int main(int argc, char* argv[]){
   };
 
     int W=5;
-    int k = cli.relabel_top_k();
+    double p = cli.relabel_top_p();
+    if (p < 0 || p > 1.0) {
+      cout << "Error: p must be between [0.0, 1.0]" << endl;
+      exit(-1);
+    }
     bool undirected=cli.symmetrize();
     clock_t start, end;
     string filename = cli.filename();
@@ -125,8 +129,14 @@ int main(int argc, char* argv[]){
     //start=clock();
     vector<int> removed;
     g_tmp.readGorderGraph(filename, undirected);
-    removed = g_tmp.RemoveGreaterThanTopK(k);
-    cout << "Vertices removed: " << removed.size() << endl; // should be zero if k <= 0
+    int k = ceil(p*g_tmp.vsize);
+    cout << "p=" << p << ",k=" << k << endl;
+    if (k) {
+        removed = g_tmp.RemoveGreaterThanTopK(k);
+        cout << "Vertices removed: " << removed.size() << endl; // should be zero if k <= 0
+    } else {
+        g_tmp.Transform();
+    }
 
     cout << name << " readGorderGraph is complete." << endl;
     //end=clock();
@@ -134,7 +144,11 @@ int main(int argc, char* argv[]){
 
     start=clock();
     vector<int> order;
-    g_tmp.GorderGreedy(order, removed, W);
+    if (k) {
+        g_tmp.GorderGreedy(order, removed, W);
+    } else {
+        g_tmp.GorderGreedy(order, W);
+    }
     end=clock();
     cout << "ReOrdered Time Cost: " << (double)(end-start)/CLOCKS_PER_SEC << endl;
   
