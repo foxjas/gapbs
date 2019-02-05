@@ -347,12 +347,11 @@ void Transform(){
 vector<int> RemoveGreaterThanTopK(int k){
     
     typedef std::pair<int, int> deg_node_p;
-    vector<deg_node_p> deg_id_pairs(graph.size());
-    for (int i=0; i<graph.size(); i++) {
+    vector<deg_node_p> deg_id_pairs(vsize);
+    for (int i=0; i<vsize; i++) {
         deg_id_pairs[i] = make_pair(graph[i].indegree, i);
     }
 
-    // TODO: how does greater comparison handle 2nd item, upon tiebreak?
     sort(deg_id_pairs.begin(), deg_id_pairs.end(), greater<deg_node_p>()); 
     int deg_cutoff = INT_MAX/2; // default for k = 0
     int v_cutoff = INT_MAX/2;
@@ -360,7 +359,8 @@ vector<int> RemoveGreaterThanTopK(int k){
 	    deg_node_p kth_pair = deg_id_pairs[k-1];
 	    deg_cutoff = kth_pair.first;
 	    v_cutoff = kth_pair.second;
-    	cout << "degree cutoff for k=" << k << ": " << deg_cutoff << std::endl;
+    	cout << "degree cutoff for k=" << k << ": " << deg_cutoff;
+       	cout << ", v_cutoff=" << v_cutoff << std::endl;
    	}
 
     // loop over over sorted deg pairs and add vertices that are greater than
@@ -922,7 +922,7 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 		}
 	}
 
-	if (tmpindex >= 0) {
+	if (tmpindex >= 0) { // only if there's at least one vertex to be processed
 		order.push_back(tmpindex);
 		unitheap.update[tmpindex]=INT_MAX/2;
 		unitheap.DeleteElement(tmpindex);
@@ -978,6 +978,7 @@ void GorderGreedy(vector<int>& retorder, vector<int>& skipVertices, int window){
 #endif
 
 	int vOrderLimit = vsize-skipVertices.size()-1;
+	// cout << "vOrderLimit: " << vOrderLimit << endl;
 	while(count<vOrderLimit){
 #ifndef Release
 		if(count%1000000==0){
