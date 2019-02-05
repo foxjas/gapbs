@@ -135,7 +135,7 @@ int main(int argc, char* argv[]){
         removed = g_tmp.RemoveGreaterThanTopK(k);
         cout << "Vertices removed: " << removed.size() << endl; // should be zero if k <= 0
     } else {
-        g_tmp.Transform();
+        removed = g_tmp.RemoveGreaterThanTopK(0);
     }
 
     cout << name << " readGorderGraph is complete." << endl;
