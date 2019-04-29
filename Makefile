@@ -1,7 +1,11 @@
 # See LICENSE.txt for license details.
 
 # CXX_FLAGS += -g -std=c++11 -O3 -Wall -march=native -mavx512f
-CXX_FLAGS += -g -std=c++11 -O3 -Wall -march=native -axMIC-AVX512
+
+
+
+CXX_FLAGS += -g -std=c++11 -O3 -Wall -march=native -xMIC-AVX512 -qopt-report=5
+CXX = icpc
 
 PAR_FLAG = -fopenmp
 
@@ -18,8 +22,11 @@ ifneq ($(SERIAL), 1)
 	CXX_FLAGS += $(PAR_FLAG)
 endif
 
-KERNELS = bc bfs cc pr sssp tc bc_lrb pr_lrb
-SUITE = $(KERNELS) converter
+#KERNELS = bc bfs cc pr sssp tc bc_lrb pr_lrb
+KERNELS = pr pr_lrb 
+
+SUITE = $(KERNELS) 
+#SUITE = $(KERNELS) converter
 
 .PHONY: all
 all: $(SUITE)
