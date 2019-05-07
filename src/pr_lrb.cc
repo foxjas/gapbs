@@ -152,80 +152,77 @@ pvector<ScoreT> PageRankPull(const Graph &g, int max_iters,
 	static const  __m512i mione32 = _mm512_set_epi32(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1); 
 	static const  __m512 mfzero32 = _mm512_set_ps(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0); 
 	for (int iter=0; iter < max_iters; iter++) {
-		int step = nthreads*16;
 
 		#pragma omp parallel for
 		for (NodeID n=0; n < g.num_nodes(); n++)
 		  outgoing_contrib[n] = scores[n] / g.out_degree(n);
 
-		#pragma omp parallel for
-  		for (int thread_id=0; thread_id < nthreads; thread_id++){
-
-
-			__m512 baseVec = _mm512_set_ps(base_score,base_score,base_score,base_score,base_score,base_score,base_score,base_score,
+		__m512 baseVec = _mm512_set_ps(base_score,base_score,base_score,base_score,base_score,base_score,base_score,base_score,
 										   base_score,base_score,base_score,base_score,base_score,base_score,base_score,base_score);
 
-			__m512 kDampVec = _mm512_set_ps(kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,
+		__m512 kDampVec = _mm512_set_ps(kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,
 											kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp,kDamp);
-  		    for (int32_t pos = thread_id*16; pos < g.num_nodes(); pos+=step) {
 
-			    if((pos+16)>=g.num_nodes()){
-			    	for(int32_t pos2=pos; pos2<g.num_nodes(); pos2++){
-					    NodeID u = lrb_queue[pos2]; 
 
-					    ScoreT incoming_total = 0;
-						for (int d=0; d< g.in_degree(u); d++){
-							NodeID v = g.in_index_[u][d];
-					     	incoming_total += outgoing_contrib[v];
-						}
-					    scores[u] = base_score + kDamp * incoming_total;
-			    	}
-			    	break;
-			    }
 
-				int32_t exceededAStop,maskA;
+        #pragma omp parallel for schedule(dynamic, 4) 
+        for (int32_t pos = 0; pos < g.num_nodes(); pos+=16) {
 
-			    __m512i uVec 		   		= _mm512_load_epi32(lrb_queue+pos);
-				__m512i uVecP1         		= _mm512_add_epi32(uVec,mione32);		    
-				__m512 incoming_totalVec	= mfzero32;
+            if((pos+16)>=g.num_nodes()){
+                for(int32_t pos2=pos; pos2<g.num_nodes(); pos2++){
+                    NodeID u = lrb_queue[pos2]; 
 
-			    __m512i indexA       = _mm512_i32gather_epi32(uVec, offSet, 4);
-			    __m512i indexAStop	= _mm512_i32gather_epi32(uVecP1, offSet, 4);
-			 	exceededAStop 		= _mm512_cmpgt_epi32_mask(indexAStop, indexA);
+                    ScoreT incoming_total = 0;
+                    for (int d=0; d< g.in_degree(u); d++){
+                        NodeID v = g.in_index_[u][d];
+                        incoming_total += outgoing_contrib[v];
+                    }
+                    scores[u] = base_score + kDamp * incoming_total;
+                }
+            } else {
+                int32_t exceededAStop,maskA;
 
-	    		// for(int32_t p=0;p<16; p++){
-	    		// 	uint32_t *val1 = (uint32_t*) &indexAStop;
-	    		// 	uint32_t *val2 = (uint32_t*) &indexA;
-	    		// 	if((val1[p]-val2[p])<0)
-		    	// 		printf("OUCH");
-	    		// }
-	    		// for(int32_t p=pos;p<(pos+16); p++){
-	    		// 	if((offSet[lrb_queue[p]+1]-offSet[lrb_queue[p]])<0)
-	    		// 		printf("%d,",lrb_queue[p]);
-		    	// 	// printf("(%d, %d) ",offSet[lrb_queue[p]+1]-offSet[lrb_queue[p]],g.in_degree(lrb_queue[p]));
-	    		// }
-	    		// printf("\n");
+                __m512i uVec 		   		= _mm512_load_epi32(lrb_queue+pos);
+                __m512i uVecP1         		= _mm512_add_epi32(uVec,mione32);		    
+                __m512 incoming_totalVec	= mfzero32;
 
-				__m512i miAelems;__m512  mContri;
-			    while (exceededAStop != 0) {
-			        miAelems			= _mm512_mask_i32gather_epi32(miAelems, exceededAStop,indexA,(const int32_t *)g.in_neighbors_, 4);
-			     	mContri  			= _mm512_mask_i32gather_ps(mContri, exceededAStop ,miAelems, outgoing_contrib,4);
+                __m512i indexA       = _mm512_i32gather_epi32(uVec, offSet, 4);
+                __m512i indexAStop	= _mm512_i32gather_epi32(uVecP1, offSet, 4);
+                exceededAStop 		= _mm512_cmpgt_epi32_mask(indexAStop, indexA);
 
-			     	incoming_totalVec 	= _mm512_mask_add_ps(incoming_totalVec,exceededAStop,incoming_totalVec, mContri);
+                // for(int32_t p=0;p<16; p++){
+                // 	uint32_t *val1 = (uint32_t*) &indexAStop;
+                // 	uint32_t *val2 = (uint32_t*) &indexA;
+                // 	if((val1[p]-val2[p])<0)
+                // 		printf("OUCH");
+                // }
+                // for(int32_t p=pos;p<(pos+16); p++){
+                // 	if((offSet[lrb_queue[p]+1]-offSet[lrb_queue[p]])<0)
+                // 		printf("%d,",lrb_queue[p]);
+                // 	// printf("(%d, %d) ",offSet[lrb_queue[p]+1]-offSet[lrb_queue[p]],g.in_degree(lrb_queue[p]));
+                // }
+                // printf("\n");
 
-			     	indexA    			= _mm512_mask_add_epi32(indexA, exceededAStop, indexA,mione32);
-			        exceededAStop 		= _mm512_cmpgt_epi32_mask(indexAStop, indexA);
-			 //        // break;
-			    
-			    }
+                __m512i miAelems;__m512  mContri;
+                while (exceededAStop != 0) {
+                    miAelems			= _mm512_mask_i32gather_epi32(miAelems, exceededAStop,indexA,(const int32_t *)g.in_neighbors_, 4);
+                    mContri  			= _mm512_mask_i32gather_ps(mContri, exceededAStop ,miAelems, outgoing_contrib,4);
 
-				incoming_totalVec = _mm512_fmadd_ps(kDampVec,incoming_totalVec,baseVec);
-				// scores[u] = base_score + kDamp * incoming_total;
+                    incoming_totalVec 	= _mm512_mask_add_ps(incoming_totalVec,exceededAStop,incoming_totalVec, mContri);
 
-			    _mm512_i32scatter_ps(scores,uVec,incoming_totalVec,4);
+                    indexA    			= _mm512_mask_add_epi32(indexA, exceededAStop, indexA,mione32);
+                    exceededAStop 		= _mm512_cmpgt_epi32_mask(indexAStop, indexA);
+            //        // break;
+                
+                }
+
+                incoming_totalVec = _mm512_fmadd_ps(kDampVec,incoming_totalVec,baseVec);
+                // scores[u] = base_score + kDamp * incoming_total;
+
+                _mm512_i32scatter_ps(scores,uVec,incoming_totalVec,4);
+            }
 
 		  }
-		}
 	}
 
 	// printf("EXITED\n"); fflush(stdout);
